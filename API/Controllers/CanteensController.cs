@@ -79,6 +79,138 @@ namespace API.Controllers
             return Ok(canteenDto);
         }
 
+        [HttpGet("status")]
+        public async Task<ActionResult<IEnumerable<CanteenStatusResponseDto>>> GetCanteensStatus(
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        [FromQuery] TimeSpan startTime,
+        [FromQuery] TimeSpan endTime,
+        [FromQuery] int duration)
+        {
+            if (startDate > endDate || duration <= 0)
+                return BadRequest("Invalid input parameters.");
+
+            var canteens = await _context.Canteens.Include(c => c.WorkingHours).ToListAsync();
+            var response = new List<CanteenStatusResponseDto>();
+
+            foreach (var canteen in canteens)
+            {
+                var slots = new List<CanteenSlotDto>();
+
+                foreach (var workingHour in canteen.WorkingHours)
+                {
+                    var whStart = TimeSpan.Parse(workingHour.From);
+                    var whEnd = TimeSpan.Parse(workingHour.To);
+
+                    var slotStart = (whStart > startTime) ? whStart : startTime;
+                    var slotEnd = (whEnd < endTime) ? whEnd : endTime;
+
+                    if (slotStart >= slotEnd) continue; 
+
+                    for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                    {
+                        var currentTime = slotStart;
+
+                        while (currentTime.Add(TimeSpan.FromMinutes(duration)) <= slotEnd)
+                        {
+                            var reservations = await _context.Reservations
+                                .Where(r => r.CanteenId == canteen.Id &&
+                                            r.ReservationDate == date &&
+                                            r.Time == currentTime &&
+                                            r.Status == ReservationStatus.Active)
+                                .CountAsync();
+
+                            var remainingCapacity = canteen.Capacity - reservations;
+
+                            slots.Add(new CanteenSlotDto
+                            {
+                                Date = date.ToString("yyyy-MM-dd"),
+                                Meal = workingHour.Meal.ToString().ToLower(),
+                                StartTime = currentTime.ToString(@"hh\:mm"),
+                                RemainingCapacity = remainingCapacity
+                            });
+
+                            currentTime = currentTime.Add(TimeSpan.FromMinutes(duration));
+                        }
+                    }
+                }
+
+                response.Add(new CanteenStatusResponseDto
+                {
+                    CanteenId = canteen.Id.ToString(),
+                    Slots = slots
+                });
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("{id}/status")]
+        public async Task<ActionResult<CanteenStatusResponseDto>> GetCanteenStatus(
+        int id,
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        [FromQuery] TimeSpan startTime,
+        [FromQuery] TimeSpan endTime,
+        [FromQuery] int duration)
+        {
+            if (startDate > endDate || duration <= 0)
+                return BadRequest("Invalid input parameters.");
+
+            var canteen = await _context.Canteens
+                .Include(c => c.WorkingHours)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (canteen == null)
+                return NotFound();
+
+            var slots = new List<CanteenSlotDto>();
+
+            foreach (var workingHour in canteen.WorkingHours)
+            {
+                var whStart = TimeSpan.Parse(workingHour.From);
+                var whEnd = TimeSpan.Parse(workingHour.To);
+
+                var slotStart = (whStart > startTime) ? whStart : startTime;
+                var slotEnd = (whEnd < endTime) ? whEnd : endTime;
+
+                if (slotStart >= slotEnd) continue;
+
+                for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                {
+                    var currentTime = slotStart;
+
+                    while (currentTime.Add(TimeSpan.FromMinutes(duration)) <= slotEnd)
+                    {
+                        var reservations = await _context.Reservations
+                            .Where(r => r.CanteenId == canteen.Id &&
+                                        r.ReservationDate == date &&
+                                        r.Time == currentTime &&
+                                        r.Status == ReservationStatus.Active)
+                            .CountAsync();
+
+                        slots.Add(new CanteenSlotDto
+                        {
+                            Date = date.ToString("yyyy-MM-dd"),
+                            Meal = workingHour.Meal.ToString().ToLower(),
+                            StartTime = currentTime.ToString(@"hh\:mm"),
+
+                            RemainingCapacity = canteen.Capacity - reservations
+                        });
+
+                        currentTime = currentTime.Add(TimeSpan.FromMinutes(duration));
+                    }
+                }
+            }
+
+            var response = new CanteenStatusResponseDto
+            {
+                CanteenId = canteen.Id.ToString(),
+                Slots = slots
+            };
+
+            return Ok(response);
+        }
         // PUT: api/Canteens/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
@@ -96,8 +228,17 @@ namespace API.Controllers
                 return NotFound();
             }
 
-            _context.Entry(canteen).State = EntityState.Modified;
-            
+            if (!string.IsNullOrEmpty(canteenDto.Name))
+                canteen.Name = canteenDto.Name;
+
+            if (!string.IsNullOrEmpty(canteenDto.Location))
+                canteen.Location = canteenDto.Location;
+
+            if (canteenDto.Capacity != null)
+                canteen.Capacity = canteenDto.Capacity.Value;
+
+            await _context.SaveChangesAsync(); 
+
             var response = new CanteenResponseDto
             {
                 Id = canteen.Id.ToString(),
@@ -111,27 +252,6 @@ namespace API.Controllers
                     To = wh.To
                 }).ToList()
             };
-
-             if (canteenDto.Name != null)
-            {
-                canteen.Name = canteenDto.Name;
-            }
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CanteenExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
 
             return Ok(response);
         }
@@ -148,7 +268,6 @@ namespace API.Controllers
                 Capacity = canteen.Capacity
             };
 
-            // Add working hours
             foreach (var workingHourDto in canteen.WorkingHours)
             {
                 var workingHour = new WorkingHour
@@ -164,7 +283,6 @@ namespace API.Controllers
             _context.Canteens.Add(newCanteen);
             await _context.SaveChangesAsync();
 
-            // Map to response DTO (no circular references)
             var response = new CanteenResponseDto
             {
                 Id = newCanteen.Id.ToString(),
@@ -182,7 +300,6 @@ namespace API.Controllers
             return CreatedAtAction("GetCanteen", new { id = newCanteen.Id }, response);
         }
 
-        // Helper to convert enum back to lowercase string
         private string MealTypeToString(MealType mealType)
         {
             return mealType switch
@@ -212,20 +329,20 @@ namespace API.Controllers
             {
                 return Forbid("Only admin students can delete a canteen.");
             }
-        {
-
-            var canteen = await _context.Canteens.FindAsync(id);
-
-            if (canteen == null)
             {
-                return NotFound();
+
+                var canteen = await _context.Canteens.FindAsync(id);
+
+                if (canteen == null)
+                {
+                    return NotFound();
+                }
+
+                _context.Canteens.Remove(canteen);
+                await _context.SaveChangesAsync();
+
+                return NoContent();
             }
-
-            _context.Canteens.Remove(canteen);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
         }
 
         private bool CanteenExists(int id)

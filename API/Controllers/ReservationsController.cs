@@ -44,8 +44,8 @@ namespace API.Controllers
 
             var response = new ReservationResponseDto
             {
-                Id = reservation.Id.ToString(),
-                StudentId = reservation.StudentId.ToString(),
+                Id = reservation.Id,
+                StudentId = reservation.StudentId,
                 CanteenId = reservation.CanteenId.ToString(),
                 Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
                 Time = reservation.Time.ToString(@"hh\:mm"),
@@ -95,8 +95,8 @@ namespace API.Controllers
         {
             var reservation = new Reservation
             {
-                StudentId = int.Parse(reservationDto.StudentId),
-                CanteenId = int.Parse(reservationDto.CanteenId),
+                StudentId = reservationDto.StudentId,
+                CanteenId = reservationDto.CanteenId,
                 ReservationDate = DateTime.Parse(reservationDto.Date),
                 Time = TimeSpan.Parse(reservationDto.Time),
                 Duration = reservationDto.Duration
@@ -107,8 +107,8 @@ namespace API.Controllers
 
             var response = new ReservationResponseDto
             {
-                Id = reservation.Id.ToString(),
-                StudentId = reservation.StudentId.ToString(),
+                Id = reservation.Id,
+                StudentId = reservation.StudentId,
                 CanteenId = reservation.CanteenId.ToString(),
                 Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
                 Time = reservation.Time.ToString(@"hh\:mm"),
@@ -124,23 +124,49 @@ namespace API.Controllers
         public async Task<IActionResult> DeleteReservation(int id, [FromHeader] string studentId)
         {
             var student = await _context.Students.FindAsync(int.Parse(studentId));
-            if (student == null || !student.IsAdmin)
+            if (student == null)
             {
-                return Forbid("Only admin students can delete a canteen.");
+                return BadRequest("Invalid student ID.");
             }
 
-            // Find the canteen
-            var canteen = await _context.Canteens.FindAsync(id);
-            if (canteen == null)
+            var reservation = await _context.Reservations.FindAsync(id);
+            if (reservation == null)
             {
                 return NotFound();
             }
 
-            // Remove the canteen
-            _context.Canteens.Remove(canteen);
-            await _context.SaveChangesAsync();
+            // Ensure the reservation belongs to the student
+            if (reservation.StudentId.ToString() != studentId)
+            {
+                return Forbid("You can only cancel your own reservations.");
+            }
 
-            return NoContent();
+            // Update the reservation status to "Cancelled"
+            reservation.Status = Enums.ReservationStatus.Cancelled;
+            _context.Entry(reservation).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "An error occurred while canceling the reservation.");
+            }
+
+            // Return the updated reservation as a response
+            var response = new ReservationResponseDto
+            {
+                Id = reservation.Id,
+                StudentId = reservation.StudentId,
+                CanteenId = reservation.CanteenId.ToString(),
+                Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
+                Time = reservation.Time.ToString(@"hh\:mm"),
+                Duration = reservation.Duration,
+                Status = reservation.Status.ToString()
+            };
+
+            return Ok(response);
         }
 
         private bool ReservationExists(int id)
