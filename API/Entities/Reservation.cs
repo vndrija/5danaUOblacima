@@ -10,6 +10,8 @@ public class Reservation
     public required int CanteenId { get; set; }
     public required DateTime ReservationDate { get; set; }
     public required int Duration { get; set; } 
+
+    public required TimeSpan Time { get; set; }
     public ReservationStatus Status { get; set;  } = ReservationStatus.Active;
     
     public Student Student { get; set; } = null!;

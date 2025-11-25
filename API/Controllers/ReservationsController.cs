@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using API.Data;
 using API.Entities;
+using API.DTOs;
 
 namespace API.Controllers
 {
@@ -30,16 +31,30 @@ namespace API.Controllers
 
         // GET: api/Reservations/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Reservation>> GetReservation(int id)
+        public async Task<ActionResult<ReservationResponseDto>> GetReservation(int id)
         {
-            var reservation = await _context.Reservations.FindAsync(id);
+
+            var reservation = await _context.Reservations
+            .FirstOrDefaultAsync(r => r.Id == id);
 
             if (reservation == null)
             {
                 return NotFound();
             }
 
-            return reservation;
+            var response = new ReservationResponseDto
+            {
+                Id = reservation.Id.ToString(),
+                StudentId = reservation.StudentId.ToString(),
+                CanteenId = reservation.CanteenId.ToString(),
+                Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
+                Time = reservation.Time.ToString(@"hh\:mm"),
+                Duration = reservation.Duration,
+                Status = reservation.Status.ToString()
+            };
+
+
+            return response;
         }
 
         // PUT: api/Reservations/5
@@ -76,25 +91,53 @@ namespace API.Controllers
         // POST: api/Reservations
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Reservation>> PostReservation(Reservation reservation)
+        public async Task<ActionResult<ReservationResponseDto>> PostReservation(ReservationRequestDto reservationDto)
         {
+            var reservation = new Reservation
+            {
+                StudentId = int.Parse(reservationDto.StudentId),
+                CanteenId = int.Parse(reservationDto.CanteenId),
+                ReservationDate = DateTime.Parse(reservationDto.Date),
+                Time = TimeSpan.Parse(reservationDto.Time),
+                Duration = reservationDto.Duration
+            };
+
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetReservation", new { id = reservation.Id }, reservation);
+            var response = new ReservationResponseDto
+            {
+                Id = reservation.Id.ToString(),
+                StudentId = reservation.StudentId.ToString(),
+                CanteenId = reservation.CanteenId.ToString(),
+                Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
+                Time = reservation.Time.ToString(@"hh\:mm"),
+                Duration = reservation.Duration,
+                Status = reservation.Status.ToString()
+            };
+
+            return CreatedAtAction(nameof(GetReservation), new { id = reservation.Id }, response);
         }
 
         // DELETE: api/Reservations/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteReservation(int id)
+        public async Task<IActionResult> DeleteReservation(int id, [FromHeader] string studentId)
         {
-            var reservation = await _context.Reservations.FindAsync(id);
-            if (reservation == null)
+            var student = await _context.Students.FindAsync(int.Parse(studentId));
+            if (student == null || !student.IsAdmin)
+            {
+                return Forbid("Only admin students can delete a canteen.");
+            }
+
+            // Find the canteen
+            var canteen = await _context.Canteens.FindAsync(id);
+            if (canteen == null)
             {
                 return NotFound();
             }
 
-            _context.Reservations.Remove(reservation);
+            // Remove the canteen
+            _context.Canteens.Remove(canteen);
             await _context.SaveChangesAsync();
 
             return NoContent();

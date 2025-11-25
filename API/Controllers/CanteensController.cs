@@ -27,34 +27,95 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Canteen>>> GetCanteens()
         {
-            return await _context.Canteens.ToListAsync();
+            var canteens = await _context.Canteens
+                .Include(c => c.WorkingHours)
+                .ToListAsync();
+
+            var canteenDtos = canteens.Select(c => new CanteenResponseDto
+            {
+                Id = c.Id.ToString(),
+                Name = c.Name,
+                Location = c.Location,
+                Capacity = c.Capacity,
+                WorkingHours = c.WorkingHours.Select(wh => new WorkingHourDto
+                {
+                    Meal = MealTypeToString(wh.Meal),
+                    From = wh.From,
+                    To = wh.To
+                }).ToList()
+            });
+            return Ok(canteenDtos);
         }
 
         // GET: api/Canteens/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Canteen>> GetCanteen(int id)
         {
-            var canteen = await _context.Canteens.FindAsync(id);
+            var canteen = await _context.Canteens
+                .Include(c => c.WorkingHours)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+
 
             if (canteen == null)
             {
                 return NotFound();
             }
 
-            return canteen;
+            var canteenDto = new CanteenResponseDto
+            {
+                Id = canteen.Id.ToString(),
+                Name = canteen.Name,
+                Location = canteen.Location,
+                Capacity = canteen.Capacity,
+                WorkingHours = canteen.WorkingHours.Select(wh => new WorkingHourDto
+                {
+                    Meal = MealTypeToString(wh.Meal),
+                    From = wh.From,
+                    To = wh.To
+                }).ToList()
+            };
+
+            return Ok(canteenDto);
         }
 
         // PUT: api/Canteens/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCanteen(int id, Canteen canteen)
+        public async Task<IActionResult> PutCanteen(int id, UpdateCanteenRequestDto canteenDto, [FromHeader] string studentId)
         {
-            if (id != canteen.Id)
+            var student = await _context.Students.FindAsync(int.Parse(studentId));
+            if (student == null || !student.IsAdmin)
             {
-                return BadRequest();
+                return Forbid("Only admin students can update a canteen.");
+            }
+
+            var canteen = await _context.Canteens.FindAsync(id);
+            if (canteen == null)
+            {
+                return NotFound();
             }
 
             _context.Entry(canteen).State = EntityState.Modified;
+            
+            var response = new CanteenResponseDto
+            {
+                Id = canteen.Id.ToString(),
+                Name = canteen.Name,
+                Location = canteen.Location,
+                Capacity = canteen.Capacity,
+                WorkingHours = canteen.WorkingHours.Select(wh => new WorkingHourDto
+                {
+                    Meal = MealTypeToString(wh.Meal),
+                    From = wh.From,
+                    To = wh.To
+                }).ToList()
+            };
+
+             if (canteenDto.Name != null)
+            {
+                canteen.Name = canteenDto.Name;
+            }
 
             try
             {
@@ -72,7 +133,7 @@ namespace API.Controllers
                 }
             }
 
-            return NoContent();
+            return Ok(response);
         }
 
         // POST: api/Canteens
@@ -81,68 +142,91 @@ namespace API.Controllers
         public async Task<ActionResult<Canteen>> PostCanteen(CreateCanteenRequestDto canteen)
         {
             var newCanteen = new Canteen
-    {
-        Name = canteen.Name,
-        Location = canteen.Location,
-        Capacity = canteen.Capacity
-    };
+            {
+                Name = canteen.Name,
+                Location = canteen.Location,
+                Capacity = canteen.Capacity
+            };
 
-    // Add working hours
-    foreach (var workingHourDto in canteen.WorkingHours)
-    {
-        var workingHour = new WorkingHour
+            // Add working hours
+            foreach (var workingHourDto in canteen.WorkingHours)
+            {
+                var workingHour = new WorkingHour
+                {
+                    Meal = ParseMealType(workingHourDto.Meal),
+                    From = workingHourDto.From,
+                    To = workingHourDto.To,
+                    Canteen = newCanteen
+                };
+                newCanteen.WorkingHours.Add(workingHour);
+            }
+
+            _context.Canteens.Add(newCanteen);
+            await _context.SaveChangesAsync();
+
+            // Map to response DTO (no circular references)
+            var response = new CanteenResponseDto
+            {
+                Id = newCanteen.Id.ToString(),
+                Name = newCanteen.Name,
+                Location = newCanteen.Location,
+                Capacity = newCanteen.Capacity,
+                WorkingHours = newCanteen.WorkingHours.Select(wh => new WorkingHourDto
+                {
+                    Meal = MealTypeToString(wh.Meal),
+                    From = wh.From,
+                    To = wh.To
+                }).ToList()
+            };
+
+            return CreatedAtAction("GetCanteen", new { id = newCanteen.Id }, response);
+        }
+
+        // Helper to convert enum back to lowercase string
+        private string MealTypeToString(MealType mealType)
         {
-            Meal = ParseMealType(workingHourDto.Meal),
-            From = workingHourDto.From,
-            To = workingHourDto.To,
-            Canteen = newCanteen
-        };
-        newCanteen.WorkingHours.Add(workingHour);
-    }
+            return mealType switch
+            {
+                MealType.Breakfast => "breakfast",
+                MealType.Lunch => "lunch",
+                MealType.Dinner => "dinner",
+                _ => throw new ArgumentException($"Unknown meal type: {mealType}")
+            };
+        }
 
-    _context.Canteens.Add(newCanteen);
-    await _context.SaveChangesAsync();
-
-    // Map to response DTO (no circular references)
-    var response = new CanteenResponseDto
-    {
-        Id = newCanteen.Id.ToString(),
-        Name = newCanteen.Name,
-        Location = newCanteen.Location,
-        Capacity = newCanteen.Capacity,
-        WorkingHours = newCanteen.WorkingHours.Select(wh => new WorkingHourDto
+        private MealType ParseMealType(string meal)
         {
-            Meal = MealTypeToString(wh.Meal),
-            From = wh.From,
-            To = wh.To
-        }).ToList()
-    };
+            return meal.ToLower() switch
+            {
+                "breakfast" => MealType.Breakfast,
+                "lunch" => MealType.Lunch,
+                "dinner" => MealType.Dinner,
+                _ => throw new ArgumentException($"Invalid meal type: {meal}")
+            };
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCanteen(int id, [FromHeader] string studentId)
+        {
+            var student = await _context.Students.FindAsync(int.Parse(studentId));
+            if (student == null || !student.IsAdmin)
+            {
+                return Forbid("Only admin students can delete a canteen.");
+            }
+        {
 
-    return CreatedAtAction("GetCanteen", new { id = newCanteen.Id }, response);
-}
+            var canteen = await _context.Canteens.FindAsync(id);
 
-// Helper to convert enum back to lowercase string
-private string MealTypeToString(MealType mealType)
-{
-    return mealType switch
-    {
-        MealType.Breakfast => "breakfast",
-        MealType.Lunch => "lunch",
-        MealType.Dinner => "dinner",
-        _ => throw new ArgumentException($"Unknown meal type: {mealType}")
-    };
-}
+            if (canteen == null)
+            {
+                return NotFound();
+            }
 
-private MealType ParseMealType(string meal)
-{
-    return meal.ToLower() switch
-    {
-        "breakfast" => MealType.Breakfast,
-        "lunch" => MealType.Lunch,
-        "dinner" => MealType.Dinner,
-        _ => throw new ArgumentException($"Invalid meal type: {meal}")
-    };
-}
+            _context.Canteens.Remove(canteen);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        }
 
         private bool CanteenExists(int id)
         {

@@ -77,12 +77,19 @@ namespace API.Controllers
         // POST: api/Students
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Student>> PostStudent(Student student)
+        public async Task<ActionResult<Student>> PostStudent(StudentRequestDto studentDto)
         {
+            var student = new Student
+            {
+                Name = studentDto.Name,
+                Email = studentDto.Email,
+                IsAdmin = studentDto.IsAdmin
+            };
+            
             _context.Students.Add(student);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetStudent", new { id = student.Id }, student);
+            return CreatedAtAction(nameof(GetStudent), new { id = student.Id }, student);
         }
 
         // DELETE: api/Students/5
