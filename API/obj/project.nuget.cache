@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "kdS5m4Ob1DQ=",
+  "dgSpecHash": "sdjM08jVTKo=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Lenovo\\Desktop\\5danaUOblacima\\API\\API.csproj",
+  "projectFilePath": "c:\\Users\\Lenovo\\Desktop\\5danaUOblacima\\API\\API.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Lenovo\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\Lenovo\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",
