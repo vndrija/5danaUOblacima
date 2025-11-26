@@ -95,6 +95,7 @@ Changed baseURL variable uin Environments to 'https://localhost:7040/api'.
 
 ```
 ![PostmanTests](https://github.com/user-attachments/assets/fa3e8b45-546e-4cd6-892d-daa7af94bc60)
+![localHost](https://github.com/user-attachments/assets/799bb802-4930-4b2e-8a5a-ca81b5ae0a6f)
 
 ### Access Swagger UI
 
@@ -108,6 +109,7 @@ The Swagger UI provides interactive API documentation where you can:
 - Test API requests directly from the browser
 - See request/response schemas
 
+![swagerSlika](https://github.com/user-attachments/assets/bfe4540a-f309-4b99-a91c-e41c627b518b)
 
 ## Running Unit Tests
 
