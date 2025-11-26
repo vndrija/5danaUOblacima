@@ -35,7 +35,7 @@ A RESTful API for managing student canteen reservations built with ASP.NET Core.
 
 Before running the application, ensure you have the following installed:
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - A code editor (Visual Studio 2022, Visual Studio Code, or JetBrains Rider recommended)
 - Git (for version control)
 
