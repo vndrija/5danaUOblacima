@@ -93,14 +93,14 @@ namespace API.Controllers
             {
                 if (string.IsNullOrWhiteSpace(studentDto.Email) || !studentDto.Email.Contains("@"))
                 {
-                    return BadRequest(new { error = "Nevalidan format emaila" });
+                    return BadRequest(new { error = "Invalid email format" });
                 }
                 var existingStudent = await _context.Students
                     .FirstOrDefaultAsync(s => s.Email == studentDto.Email);
 
                 if (existingStudent != null)
                 {
-                    return BadRequest(new { error = "Student sa ovim emailom već postoji" });
+                    return BadRequest(new { error = "A student with this email already exists" });
                 }
 
                 var student = _mapper.Map<Student>(studentDto);
@@ -114,7 +114,7 @@ namespace API.Controllers
             }
             catch (Exception)
             {
-                return StatusCode(500, new { error = "Došlo je do greške prilikom kreiranja studenta" });
+                return StatusCode(500, new { error = "An error occurred while creating the student" });
             }
         }
 

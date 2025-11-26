@@ -62,12 +62,12 @@ namespace API.Controllers
         public async Task<IActionResult> PutCanteen(int id, UpdateCanteenRequestDto canteenDto, [FromHeader] int studentId)
         {
             if (canteenDto == null)
-                return BadRequest("Podaci za azuriranje nisu poslati.");
+                return BadRequest("Canteen data must be provided.");
 
             var student = await _context.Students.FindAsync(studentId);
 
             if (student == null || !student.IsAdmin)
-                return StatusCode(403, "Samo redar moze azurirati menzu.");
+                return StatusCode(403, "Only an admin can update the canteen.");
 
             var canteen = await _context.Canteens
                 .Include(c => c.WorkingHours)
@@ -95,10 +95,10 @@ namespace API.Controllers
             var student = await _context.Students.FindAsync(studentId);
 
             if (student == null || !student.IsAdmin)
-                return StatusCode(403, "Samo redar moze napraviti menzu.");
+                return StatusCode(403, "Only an admin can create a canteen.");
 
             if (canteenDto.WorkingHours == null || !canteenDto.WorkingHours.Any())
-                return BadRequest("Menza mora imati radno vreme.");
+                return BadRequest("Canteen must have working hours.");
 
             var newCanteen = _mapper.Map<Canteen>(canteenDto);
 
@@ -116,7 +116,7 @@ namespace API.Controllers
 
             if (student == null || !student.IsAdmin)
             {
-                return StatusCode(403, "Samo redar moze obrisati menzu.");
+                return StatusCode(403, "Only an admin can delete the canteen.");
             }
 
             var canteen = await _context.Canteens.FindAsync(id);
@@ -164,12 +164,12 @@ namespace API.Controllers
                 !TimeOnly.TryParse(startTime, out var timeStart) ||
                 !TimeOnly.TryParse(endTime, out var timeEnd))
             {
-                return BadRequest("Nevalidan format datuma ili vremena.");
+                return BadRequest("Invalid date or time format.");
             }
 
             if (start > end || duration <= 0 || (duration != 30 && duration != 60))
             {
-                return BadRequest("Nevalidni ulazni parametri.");
+                return BadRequest("Invalid input parameters.");
             }
 
             var canteens = await _context.Canteens
@@ -254,12 +254,12 @@ namespace API.Controllers
                 !TimeOnly.TryParse(startTime, out var timeStart) ||
                 !TimeOnly.TryParse(endTime, out var timeEnd))
             {
-                return BadRequest("Nevalidan format datuma ili vremena.");
+                return BadRequest("Invalid date or time format.");
             }
 
             if (start > end || duration <= 0 || (duration != 30 && duration != 60))
             {
-                return BadRequest("Nevalidni ulazni parametri.");
+                return BadRequest("Invalid input parameters.");
             }
 
             var canteen = await _context.Canteens
