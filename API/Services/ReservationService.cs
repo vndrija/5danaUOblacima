@@ -1,6 +1,7 @@
 using API.DTOs;
 using API.Entities;
 using API.Enums;
+using API.Exceptions;
 using API.Repositories;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -47,44 +48,44 @@ namespace API.Services
             if (!int.TryParse(reservationDto.StudentId, out var studentId) ||
                 !int.TryParse(reservationDto.CanteenId, out var canteenId))
             {
-                throw new ArgumentException("Invalid student or canteen ID");
+                throw new BadRequestException("Invalid student or canteen ID");
             }
 
             if (!DateOnly.TryParse(reservationDto.Date, out var date))
             {
-                throw new ArgumentException("Invalid date format");
+                throw new BadRequestException("Invalid date format");
             }
 
             if (date < DateOnly.FromDateTime(DateTime.Today))
             {
-                throw new ArgumentException("Reservation date cannot be in the past");
+                throw new BadRequestException("Reservation date cannot be in the past");
             }
 
             if (!TimeOnly.TryParse(reservationDto.Time, out var timeOnly))
             {
-                throw new ArgumentException("Invalid time format");
+                throw new BadRequestException("Invalid time format");
             }
 
             if (timeOnly.Minute != 0 && timeOnly.Minute != 30)
             {
-                throw new ArgumentException("Time must start on the hour or half-hour");
+                throw new BadRequestException("Time must start on the hour or half-hour");
             }
 
             if (reservationDto.Duration != 30 && reservationDto.Duration != 60)
             {
-                throw new ArgumentException("Duration must be 30 or 60 minutes");
+                throw new BadRequestException("Duration must be 30 or 60 minutes");
             }
 
             var student = await _studentRepository.GetByIdAsync(studentId);
             if (student == null)
             {
-                throw new ArgumentException("Student does not exist");
+                throw new BadRequestException("Student does not exist");
             }
 
             var canteen = await _canteenRepository.GetByIdWithWorkingHoursAsync(canteenId);
             if (canteen == null)
             {
-                throw new ArgumentException("Canteen does not exist");
+                throw new BadRequestException("Canteen does not exist");
             }
 
             var reservationEnd = timeOnly.AddMinutes(reservationDto.Duration);
@@ -99,7 +100,7 @@ namespace API.Services
 
             if (!isWithinWorkingHours)
             {
-                throw new InvalidOperationException("Reservation time is outside the canteen's working hours");
+                throw new BadRequestException("Reservation time is outside the canteen's working hours");
             }
 
             var existingReservations = await _reservationRepository.GetActiveReservationsByStudentAndDateAsync(studentId, date);
@@ -114,7 +115,7 @@ namespace API.Services
 
             if (hasOverlap)
             {
-                throw new InvalidOperationException("Student already has a reservation at this time");
+                throw new BadRequestException("Student already has a reservation at this time");
             }
 
             var activeReservations = await _reservationRepository.GetActiveReservationsByCanteenAndDateAsync(canteenId, date);
@@ -129,7 +130,7 @@ namespace API.Services
 
             if (overlappingCount >= canteen.Capacity)
             {
-                throw new InvalidOperationException("Canteen is at full capacity for this time slot");
+                throw new BadRequestException("Canteen is at full capacity for this time slot");
             }
 
             var reservation = _mapper.Map<Reservation>(reservationDto);
@@ -179,12 +180,12 @@ namespace API.Services
 
             if (reservation.StudentId != studentId)
             {
-                throw new UnauthorizedAccessException("Only the student who made the reservation can cancel it.");
+                throw new ForbiddenException("Only the student who made the reservation can cancel it.");
             }
 
             if (reservation.Status == ReservationStatus.Cancelled)
             {
-                throw new InvalidOperationException("Reservation is already cancelled.");
+                throw new BadRequestException("Reservation is already cancelled.");
             }
 
             reservation.Status = ReservationStatus.Cancelled;

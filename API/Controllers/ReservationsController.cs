@@ -55,23 +55,8 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<ReservationResponseDto>> PostReservation(ReservationRequestDto reservationDto)
         {
-            try
-            {
-                var response = await _reservationService.CreateReservationAsync(reservationDto);
-                return CreatedAtAction(nameof(GetReservation), new { id = int.Parse(response.Id) }, response);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = "An error occurred", details = ex.Message });
-            }
+            var response = await _reservationService.CreateReservationAsync(reservationDto);
+            return CreatedAtAction(nameof(GetReservation), new { id = int.Parse(response.Id) }, response);
         }
 
 
@@ -79,29 +64,14 @@ namespace API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteReservation(int id, [FromHeader] int studentId)
         {
-            try
-            {
-                var response = await _reservationService.CancelReservationAsync(id, studentId);
+            var response = await _reservationService.CancelReservationAsync(id, studentId);
 
-                if (response == null)
-                {
-                    return NotFound();
-                }
+            if (response == null)
+            {
+                return NotFound();
+            }
 
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return StatusCode(403, ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "An error occurred while cancelling the reservation.");
-            }
+            return Ok(response);
         }
     }
 }

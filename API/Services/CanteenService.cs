@@ -1,5 +1,6 @@
 using API.DTOs;
 using API.Entities;
+using API.Exceptions;
 using API.Repositories;
 using AutoMapper;
 
@@ -43,12 +44,12 @@ namespace API.Services
 
             if (student == null || !student.IsAdmin)
             {
-                throw new UnauthorizedAccessException("Only an admin can create a canteen.");
+                throw new ForbiddenException("Only an admin can create a canteen.");
             }
 
             if (canteenDto.WorkingHours == null || !canteenDto.WorkingHours.Any())
             {
-                throw new ArgumentException("Canteen must have working hours.");
+                throw new BadRequestException("Canteen must have working hours.");
             }
 
             var newCanteen = _mapper.Map<Canteen>(canteenDto);
@@ -61,14 +62,14 @@ namespace API.Services
         {
             if (canteenDto == null)
             {
-                throw new ArgumentException("Canteen data must be provided.");
+                throw new BadRequestException("Canteen data must be provided.");
             }
 
             var student = await _studentRepository.GetByIdAsync(studentId);
 
             if (student == null || !student.IsAdmin)
             {
-                throw new UnauthorizedAccessException("Only an admin can update the canteen.");
+                throw new ForbiddenException("Only an admin can update the canteen.");
             }
 
             var canteen = await _canteenRepository.GetByIdWithWorkingHoursAsync(id);
@@ -91,7 +92,7 @@ namespace API.Services
 
             if (student == null || !student.IsAdmin)
             {
-                throw new UnauthorizedAccessException("Only an admin can delete the canteen.");
+                throw new ForbiddenException("Only an admin can delete the canteen.");
             }
 
             var canteen = await _canteenRepository.GetByIdAsync(id);
@@ -118,12 +119,12 @@ namespace API.Services
                 !TimeOnly.TryParse(startTime, out var timeStart) ||
                 !TimeOnly.TryParse(endTime, out var timeEnd))
             {
-                throw new ArgumentException("Invalid date or time format.");
+                throw new BadRequestException("Invalid date or time format.");
             }
 
             if (start > end || duration <= 0 || (duration != 30 && duration != 60))
             {
-                throw new ArgumentException("Invalid input parameters.");
+                throw new BadRequestException("Invalid input parameters.");
             }
 
             var canteens = await _canteenRepository.GetAllWithWorkingHoursAsync();
@@ -151,12 +152,12 @@ namespace API.Services
                 !TimeOnly.TryParse(startTime, out var timeStart) ||
                 !TimeOnly.TryParse(endTime, out var timeEnd))
             {
-                throw new ArgumentException("Invalid date or time format.");
+                throw new BadRequestException("Invalid date or time format.");
             }
 
             if (start > end || duration <= 0 || (duration != 30 && duration != 60))
             {
-                throw new ArgumentException("Invalid input parameters.");
+                throw new BadRequestException("Invalid input parameters.");
             }
 
             var canteen = await _canteenRepository.GetByIdWithWorkingHoursAsync(id);

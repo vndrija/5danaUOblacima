@@ -55,23 +55,8 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<StudentResponseDto>> PostStudent(StudentRequestDto studentDto)
         {
-            try
-            {
-                var studentResponseDto = await _studentService.CreateStudentAsync(studentDto);
-                return CreatedAtAction(nameof(GetStudent), new { id = studentResponseDto.Id }, studentResponseDto);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "An error occurred while creating the student" });
-            }
+            var studentResponseDto = await _studentService.CreateStudentAsync(studentDto);
+            return CreatedAtAction(nameof(GetStudent), new { id = studentResponseDto.Id }, studentResponseDto);
         }
 
         [HttpDelete("{id}")]

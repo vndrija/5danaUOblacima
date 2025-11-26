@@ -41,25 +41,14 @@ namespace API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCanteen(int id, UpdateCanteenRequestDto canteenDto, [FromHeader] int studentId)
         {
-            try
-            {
-                var response = await _canteenService.UpdateCanteenAsync(id, canteenDto, studentId);
+            var response = await _canteenService.UpdateCanteenAsync(id, canteenDto, studentId);
 
-                if (response == null)
-                {
-                    return NotFound();
-                }
+            if (response == null)
+            {
+                return NotFound();
+            }
 
-                return Ok(response);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return StatusCode(403, ex.Message);
-            }
+            return Ok(response);
         }
 
         // POST: api/Canteens
@@ -68,38 +57,20 @@ namespace API.Controllers
         CreateCanteenRequestDto canteenDto,
         [FromHeader] int studentId)
         {
-            try
-            {
-                var response = await _canteenService.CreateCanteenAsync(canteenDto, studentId);
-                return CreatedAtAction(nameof(GetCanteen), new { id = int.Parse(response.Id) }, response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return StatusCode(403, ex.Message);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            var response = await _canteenService.CreateCanteenAsync(canteenDto, studentId);
+            return CreatedAtAction(nameof(GetCanteen), new { id = int.Parse(response.Id) }, response);
         }
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCanteen(int id, [FromHeader] int studentId)
         {
-            try
-            {
-                var result = await _canteenService.DeleteCanteenAsync(id, studentId);
+            var result = await _canteenService.DeleteCanteenAsync(id, studentId);
 
-                if (!result)
-                {
-                    return NotFound();
-                }
-
-                return NoContent();
-            }
-            catch (UnauthorizedAccessException ex)
+            if (!result)
             {
-                return StatusCode(403, ex.Message);
+                return NotFound();
             }
+
+            return NoContent();
         }
 
         [HttpGet("status")]
@@ -110,15 +81,8 @@ namespace API.Controllers
         [FromQuery] string endTime,
         [FromQuery] int duration)
         {
-            try
-            {
-                var response = await _canteenService.GetCanteensStatusAsync(startDate, endDate, startTime, endTime, duration);
-                return Ok(response);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            var response = await _canteenService.GetCanteensStatusAsync(startDate, endDate, startTime, endTime, duration);
+            return Ok(response);
         }
 
         [HttpGet("{id}/status")]
@@ -130,21 +94,14 @@ namespace API.Controllers
         [FromQuery] string endTime,
         [FromQuery] int duration)
         {
-            try
-            {
-                var response = await _canteenService.GetCanteenStatusAsync(id, startDate, endDate, startTime, endTime, duration);
+            var response = await _canteenService.GetCanteenStatusAsync(id, startDate, endDate, startTime, endTime, duration);
 
-                if (response == null)
-                {
-                    return NotFound();
-                }
-
-                return Ok(response);
-            }
-            catch (ArgumentException ex)
+            if (response == null)
             {
-                return BadRequest(ex.Message);
+                return NotFound();
             }
+
+            return Ok(response);
         }
     }
 }

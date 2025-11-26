@@ -1,5 +1,6 @@
 using API.DTOs;
 using API.Entities;
+using API.Exceptions;
 using API.Repositories;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -37,13 +38,13 @@ namespace API.Services
         {
             if (string.IsNullOrWhiteSpace(studentDto.Email) || !studentDto.Email.Contains("@"))
             {
-                throw new ArgumentException("Invalid email format");
+                throw new BadRequestException("Invalid email format");
             }
 
             var existingStudent = await _repository.GetByEmailAsync(studentDto.Email);
             if (existingStudent != null)
             {
-                throw new InvalidOperationException("A student with this email already exists");
+                throw new BadRequestException("A student with this email already exists");
             }
 
             var student = _mapper.Map<Student>(studentDto);
