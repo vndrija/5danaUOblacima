@@ -5,7 +5,6 @@
 - **.NET**: 9.0
 - **Entity Framework Core**: 9.0
 - **Microsoft.EntityFrameworkCore.InMemory**: For in-memory database testing
-- **FluentAssertions**: For better assertions in tests
 
 ## Environment Setup Instructions
 

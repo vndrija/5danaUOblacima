@@ -55,7 +55,7 @@ namespace API.Controllers
             }
 
             var student = await _context.Students.FindAsync(id);
-            
+
             if (student == null)
             {
                 return NotFound();
@@ -89,14 +89,33 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<StudentResponseDto>> PostStudent(StudentRequestDto studentDto)
         {
-            var student = _mapper.Map<Student>(studentDto);
+            try
+            {
+                if (string.IsNullOrWhiteSpace(studentDto.Email) || !studentDto.Email.Contains("@"))
+                {
+                    return BadRequest(new { error = "Nevalidan format emaila" });
+                }
+                var existingStudent = await _context.Students
+                    .FirstOrDefaultAsync(s => s.Email == studentDto.Email);
 
-            _context.Students.Add(student);
-            await _context.SaveChangesAsync();
+                if (existingStudent != null)
+                {
+                    return BadRequest(new { error = "Student sa ovim emailom već postoji" });
+                }
 
-            var studentResponseDto = _mapper.Map<StudentResponseDto>(student);
+                var student = _mapper.Map<Student>(studentDto);
 
-            return CreatedAtAction(nameof(GetStudent), new { id = student.Id }, studentResponseDto);
+                _context.Students.Add(student);
+                await _context.SaveChangesAsync();
+
+                var studentResponseDto = _mapper.Map<StudentResponseDto>(student);
+
+                return CreatedAtAction(nameof(GetStudent), new { id = student.Id }, studentResponseDto);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { error = "Došlo je do greške prilikom kreiranja studenta" });
+            }
         }
 
         [HttpDelete("{id}")]

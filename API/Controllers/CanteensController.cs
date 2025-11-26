@@ -119,13 +119,19 @@ namespace API.Controllers
                 return StatusCode(403, "Samo redar moze obrisati menzu.");
             }
 
-
-
             var canteen = await _context.Canteens.FindAsync(id);
 
             if (canteen == null)
             {
                 return NotFound();
+            }
+            var activeReservations = await _context.Reservations
+                .Where(r => r.CanteenId == id && r.Status == ReservationStatus.Active)
+                .ToListAsync();
+            
+            foreach (var reservation in activeReservations)
+            {
+                reservation.Status = ReservationStatus.Cancelled;
             }
 
             _context.Canteens.Remove(canteen);

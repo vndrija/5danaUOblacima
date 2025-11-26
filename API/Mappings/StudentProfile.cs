@@ -9,7 +9,9 @@ public class StudentProfile : Profile
 {
     public StudentProfile()
     {
-        CreateMap<Student, StudentResponseDto>();
+        CreateMap<Student, StudentResponseDto>()
+        .ForMember(dest => dest.Id,
+                opt => opt.MapFrom(src => src.Id.ToString())); ;
         CreateMap<StudentResponseDto, Student>();
         CreateMap<StudentRequestDto, Student>();
     }
