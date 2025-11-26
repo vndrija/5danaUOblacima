@@ -10,7 +10,7 @@ public class Reservation
     public int CanteenId { get; set; }
     public DateOnly Date { get; set; }
 
-    public string Time { get; set; } = string.Empty; // "12:00"
+    public string Time { get; set; } = string.Empty;
 
      public int Duration { get; set; } 
     

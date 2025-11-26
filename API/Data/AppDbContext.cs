@@ -94,13 +94,13 @@ public class AppDbContext : DbContext
             .HasMany(c => c.Reservations)
             .WithOne(r => r.Canteen)
             .HasForeignKey(r => r.CanteenId)
-            .OnDelete(DeleteBehavior.Cascade); // Cascade delete reservations when canteen is deleted
+            .OnDelete(DeleteBehavior.Cascade); 
 
         modelBuilder.Entity<Student>()
             .HasMany(s => s.Reservations)
             .WithOne(r => r.Student)
             .HasForeignKey(r => r.StudentId)
-            .OnDelete(DeleteBehavior.Restrict); // Don't cascade delete
+            .OnDelete(DeleteBehavior.Restrict); 
 
         modelBuilder.Entity<Reservation>()
             .HasIndex(r => new { r.CanteenId, r.Date, r.Status });

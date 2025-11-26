@@ -4,7 +4,7 @@ namespace API.DTOs;
 
 public class ReservationResponseDto
 {
-    public string Id { get; set; } = string.Empty;         // ← string
+    public string Id { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string StudentId { get; set; } = string.Empty;
     public string CanteenId { get; set; } = string.Empty;
