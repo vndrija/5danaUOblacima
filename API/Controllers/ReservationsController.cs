@@ -93,6 +93,13 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<ReservationResponseDto>> PostReservation(ReservationRequestDto reservationDto)
         {
+            var reservationDate = DateOnly.Parse(reservationDto.Date);
+            if (reservationDate < DateOnly.FromDateTime(DateTime.Now))
+            {
+                return BadRequest("Rezervacija mora biti u buducnosti.");
+            }
+
+
             var reservation = new Reservation
             {
                 StudentId = reservationDto.StudentId,
@@ -137,7 +144,7 @@ namespace API.Controllers
 
             if (reservation.StudentId.ToString() != studentId)
             {
-                return Forbid("You can only cancel your own reservations.");
+                return Forbid("Samo student koji je napravio rezervaciju moze da je otkaze.");
             }
 
             reservation.Status = Enums.ReservationStatus.Cancelled;

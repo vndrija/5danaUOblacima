@@ -259,7 +259,7 @@ namespace API.Controllers
             var student = await _context.Students.FindAsync(studentId);
             if (student == null || !student.IsAdmin)
             {
-                return StatusCode(403, "Samo redar moze napraviti menzu.");
+                return StatusCode(403, "Samo redar moze azurirati menzu.");
             }
 
             var canteen = await _context.Canteens
@@ -375,7 +375,7 @@ namespace API.Controllers
             var student = await _context.Students.FindAsync(int.Parse(studentId));
             if (student == null || !student.IsAdmin)
             {
-                return Forbid("Only admin students can delete a canteen.");
+                return Forbid("Samo redar moze obrisati menzu.");
             }
             {
 

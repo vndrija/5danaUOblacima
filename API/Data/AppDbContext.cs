@@ -6,8 +6,8 @@ namespace API.Data;
 
 public class AppDbContext : DbContext
 {
-public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options)
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
     {
     }
 
@@ -16,11 +16,11 @@ public AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Reservation> Reservations { get; set; } = null!;
     public DbSet<WorkingHour> WorkingHours { get; set; } = null!;
-     protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-modelBuilder.Entity<Student>()
+        modelBuilder.Entity<Student>()
             .HasIndex(s => s.Email)
             .IsUnique();
 
@@ -34,11 +34,6 @@ modelBuilder.Entity<Student>()
             .IsRequired()
             .HasMaxLength(200);
 
-        // ============================================
-        // CANTEEN CONFIGURATION
-        // ============================================
-        
-        // "jedinstvenog imena"
         modelBuilder.Entity<Canteen>()
             .HasIndex(c => c.Name)
             .IsUnique();
@@ -57,29 +52,20 @@ modelBuilder.Entity<Student>()
             .Property(c => c.Capacity)
             .IsRequired();
 
-        // ============================================
-        // WORKING HOUR CONFIGURATION
-        // ============================================
-        
         modelBuilder.Entity<WorkingHour>()
             .Property(wh => wh.From)
             .IsRequired()
-            .HasMaxLength(5); // "HH:mm"
+            .HasMaxLength(5);
 
         modelBuilder.Entity<WorkingHour>()
             .Property(wh => wh.To)
             .IsRequired()
-            .HasMaxLength(5); // "HH:mm"
+            .HasMaxLength(5);
 
-        // Store MealType as string in database
         modelBuilder.Entity<WorkingHour>()
             .Property(wh => wh.Meal)
             .HasConversion<string>();
 
-        // ============================================
-        // RESERVATION CONFIGURATION
-        // ============================================
-        
         modelBuilder.Entity<Reservation>()
             .Property(r => r.Date)
             .IsRequired();
@@ -87,56 +73,38 @@ modelBuilder.Entity<Student>()
         modelBuilder.Entity<Reservation>()
             .Property(r => r.Time)
             .IsRequired()
-            .HasMaxLength(5); // "HH:mm"
+            .HasMaxLength(5);
 
-        // "može biti dužine 30 ili 60 min"
         modelBuilder.Entity<Reservation>()
             .Property(r => r.Duration)
             .IsRequired();
 
-        // "Otkazana rezervacija treba da ostane vidljiva u sistemu sa statusom „Cancelled""
         modelBuilder.Entity<Reservation>()
             .Property(r => r.Status)
             .HasConversion<string>()
             .IsRequired();
 
-        // ============================================
-        // RELATIONSHIPS
-        // ============================================
-        
-        // Canteen -> WorkingHours (One-to-Many)
-        // "Ovom akcijom treba otkazati kreirane rezervacije za menzu koja je obrisana"
         modelBuilder.Entity<Canteen>()
             .HasMany(c => c.WorkingHours)
             .WithOne(wh => wh.Canteen)
             .HasForeignKey(wh => wh.CanteenId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Canteen -> Reservations (One-to-Many)
-        // "Ovom akcijom treba otkazati kreirane rezervacije za menzu koja je obrisana"
-        // Note: We handle cancellation in business logic, not cascade delete
         modelBuilder.Entity<Canteen>()
             .HasMany(c => c.Reservations)
             .WithOne(r => r.Canteen)
             .HasForeignKey(r => r.CanteenId)
             .OnDelete(DeleteBehavior.Restrict); // Don't cascade delete
 
-        // Student -> Reservations (One-to-Many)
         modelBuilder.Entity<Student>()
             .HasMany(s => s.Reservations)
             .WithOne(r => r.Student)
             .HasForeignKey(r => r.StudentId)
             .OnDelete(DeleteBehavior.Restrict); // Don't cascade delete
 
-        // ============================================
-        // INDEXES FOR PERFORMANCE
-        // ============================================
-        
-        // For querying reservations by canteen and date
         modelBuilder.Entity<Reservation>()
             .HasIndex(r => new { r.CanteenId, r.Date, r.Status });
 
-        // For checking student's reservations in a time slot
         modelBuilder.Entity<Reservation>()
             .HasIndex(r => new { r.StudentId, r.Date, r.Status });
     }
