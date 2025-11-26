@@ -24,14 +24,23 @@ namespace API.Controllers
 
         // GET: api/Students
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Student>>> GetStudents()
+        public async Task<ActionResult<IEnumerable<StudentResponseDto>>> GetStudents()
         {
-            return await _context.Students.ToListAsync();
+            var students = await _context.Students.ToListAsync();
+            var studentDtos = students.Select(student => new StudentResponseDto
+            {
+                Id = student.Id,
+                Name = student.Name,
+                Email = student.Email,
+                IsAdmin = student.IsAdmin
+            }).ToList();
+
+            return studentDtos;
         }
 
         // GET: api/Students/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Student>> GetStudent(int id)
+        public async Task<ActionResult<StudentResponseDto>> GetStudent(int id)
         {
             var student = await _context.Students.FindAsync(id);
 
@@ -39,8 +48,15 @@ namespace API.Controllers
             {
                 return NotFound();
             }
+            var studentDto = new StudentResponseDto
+            {
+                Id = student.Id,
+                Name = student.Name,
+                Email = student.Email,
+                IsAdmin = student.IsAdmin
+            };
 
-            return student;
+            return Ok(studentDto);
         }
 
         // PUT: api/Students/5
@@ -77,7 +93,7 @@ namespace API.Controllers
         // POST: api/Students
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Student>> PostStudent(StudentRequestDto studentDto)
+        public async Task<ActionResult<StudentResponseDto>> PostStudent(StudentRequestDto studentDto)
         {
             var student = new Student
             {
@@ -85,27 +101,19 @@ namespace API.Controllers
                 Email = studentDto.Email,
                 IsAdmin = studentDto.IsAdmin
             };
-            
+
             _context.Students.Add(student);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetStudent), new { id = student.Id }, student);
-        }
-
-        // DELETE: api/Students/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteStudent(int id)
-        {
-            var student = await _context.Students.FindAsync(id);
-            if (student == null)
+            var studentResponseDto = new StudentResponseDto
             {
-                return NotFound();
-            }
+                Id = student.Id,
+                Name = student.Name,
+                Email = student.Email,
+                IsAdmin = student.IsAdmin
+            };
 
-            _context.Students.Remove(student);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            return CreatedAtAction(nameof(GetStudent), new { id = student.Id }, studentResponseDto);
         }
 
         private bool StudentExists(int id)

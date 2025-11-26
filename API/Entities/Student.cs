@@ -9,4 +9,6 @@ public class Student
     public required string Email { get; set; }
     public bool IsAdmin { get; set;} = false;
 
+    public List<Reservation> Reservations { get; set; } = new();
+
 }

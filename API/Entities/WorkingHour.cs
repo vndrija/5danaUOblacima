@@ -7,6 +7,7 @@ public class WorkingHour
 {
     public int Id { get; set;}
     public int CanteenId { get; set; }
+    
     public MealType Meal { get; set; }
 
     public string From { get; set; } = string.Empty; 

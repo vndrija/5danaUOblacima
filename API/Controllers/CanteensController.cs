@@ -55,8 +55,6 @@ namespace API.Controllers
                 .Include(c => c.WorkingHours)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
-
-
             if (canteen == null)
             {
                 return NotFound();
@@ -81,16 +79,29 @@ namespace API.Controllers
 
         [HttpGet("status")]
         public async Task<ActionResult<IEnumerable<CanteenStatusResponseDto>>> GetCanteensStatus(
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate,
-        [FromQuery] TimeSpan startTime,
-        [FromQuery] TimeSpan endTime,
+        [FromQuery] string startDate,     
+        [FromQuery] string endDate,       
+        [FromQuery] string startTime,     
+        [FromQuery] string endTime,       
         [FromQuery] int duration)
         {
-            if (startDate > endDate || duration <= 0)
-                return BadRequest("Invalid input parameters.");
+            if (!DateOnly.TryParse(startDate, out var start) ||
+                !DateOnly.TryParse(endDate, out var end) ||
+                !TimeOnly.TryParse(startTime, out var timeStart) ||
+                !TimeOnly.TryParse(endTime, out var timeEnd))
+            {
+                return BadRequest("Invalid date or time format.");
+            }
 
-            var canteens = await _context.Canteens.Include(c => c.WorkingHours).ToListAsync();
+            if (start > end || duration <= 0 || (duration != 30 && duration != 60))
+            {
+                return BadRequest("Invalid input parameters.");
+            }
+
+            var canteens = await _context.Canteens
+                .Include(c => c.WorkingHours)
+                .ToListAsync();
+
             var response = new List<CanteenStatusResponseDto>();
 
             foreach (var canteen in canteens)
@@ -99,38 +110,48 @@ namespace API.Controllers
 
                 foreach (var workingHour in canteen.WorkingHours)
                 {
-                    var whStart = TimeSpan.Parse(workingHour.From);
-                    var whEnd = TimeSpan.Parse(workingHour.To);
+                    var whStart = TimeOnly.Parse(workingHour.From);
+                    var whEnd = TimeOnly.Parse(workingHour.To);
 
-                    var slotStart = (whStart > startTime) ? whStart : startTime;
-                    var slotEnd = (whEnd < endTime) ? whEnd : endTime;
+                    var slotStart = (whStart > timeStart) ? whStart : timeStart;
+                    var slotEnd = (whEnd < timeEnd) ? whEnd : timeEnd;
 
                     if (slotStart >= slotEnd) continue;
 
-                    for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                    for (var date = start; date <= end; date = date.AddDays(1))
                     {
                         var currentTime = slotStart;
 
-                        while (currentTime.Add(TimeSpan.FromMinutes(duration)) <= slotEnd)
+                        while (currentTime.AddMinutes(duration) <= slotEnd)
                         {
+                            var currentTimeStr = currentTime.ToString("HH:mm");
+
                             var reservations = await _context.Reservations
                                 .Where(r => r.CanteenId == canteen.Id &&
-                                            r.ReservationDate == date &&
-                                            r.Time == currentTime &&
+                                            r.Date == date &&
                                             r.Status == ReservationStatus.Active)
-                                .CountAsync();
+                                .ToListAsync();
 
-                            var remainingCapacity = canteen.Capacity - reservations;
+                            var overlappingCount = reservations.Count(r =>
+                            {
+                                var resStart = TimeOnly.Parse(r.Time);
+                                var resEnd = resStart.AddMinutes(r.Duration);
+                                var slotEnd = currentTime.AddMinutes(duration);
+
+                                return resStart < slotEnd && resEnd > currentTime;
+                            });
+
+                            var remainingCapacity = canteen.Capacity - overlappingCount;
 
                             slots.Add(new CanteenSlotDto
                             {
                                 Date = date.ToString("yyyy-MM-dd"),
                                 Meal = workingHour.Meal.ToString().ToLower(),
-                                StartTime = currentTime.ToString(@"hh\:mm"),
+                                StartTime = currentTimeStr,
                                 RemainingCapacity = remainingCapacity
                             });
 
-                            currentTime = currentTime.Add(TimeSpan.FromMinutes(duration));
+                            currentTime = currentTime.AddMinutes(duration);
                         }
                     }
                 }
@@ -147,15 +168,25 @@ namespace API.Controllers
 
         [HttpGet("{id}/status")]
         public async Task<ActionResult<CanteenStatusResponseDto>> GetCanteenStatus(
-        int id,
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate,
-        [FromQuery] TimeSpan startTime,
-        [FromQuery] TimeSpan endTime,
-        [FromQuery] int duration)
+            int id,
+            [FromQuery] string startDate,     
+            [FromQuery] string endDate,       
+            [FromQuery] string startTime,     
+            [FromQuery] string endTime,
+            [FromQuery] int duration)
         {
-            if (startDate > endDate || duration <= 0)
+            if (!DateOnly.TryParse(startDate, out var start) ||
+                !DateOnly.TryParse(endDate, out var end) ||
+                !TimeOnly.TryParse(startTime, out var timeStart) ||
+                !TimeOnly.TryParse(endTime, out var timeEnd))
+            {
+                return BadRequest("Invalid date or time format.");
+            }
+
+            if (start > end || duration <= 0 || (duration != 30 && duration != 60))
+            {
                 return BadRequest("Invalid input parameters.");
+            }
 
             var canteen = await _context.Canteens
                 .Include(c => c.WorkingHours)
@@ -168,37 +199,46 @@ namespace API.Controllers
 
             foreach (var workingHour in canteen.WorkingHours)
             {
-                var whStart = TimeSpan.Parse(workingHour.From);
-                var whEnd = TimeSpan.Parse(workingHour.To);
+                var whStart = TimeOnly.Parse(workingHour.From);
+                var whEnd = TimeOnly.Parse(workingHour.To);
 
-                var slotStart = (whStart > startTime) ? whStart : startTime;
-                var slotEnd = (whEnd < endTime) ? whEnd : endTime;
+                var slotStart = (whStart > timeStart) ? whStart : timeStart;
+                var slotEnd = (whEnd < timeEnd) ? whEnd : timeEnd;
 
                 if (slotStart >= slotEnd) continue;
 
-                for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                for (var date = start; date <= end; date = date.AddDays(1))
                 {
                     var currentTime = slotStart;
 
-                    while (currentTime.Add(TimeSpan.FromMinutes(duration)) <= slotEnd)
+                    while (currentTime.AddMinutes(duration) <= slotEnd)
                     {
+                        var currentTimeStr = currentTime.ToString("HH:mm");
+
                         var reservations = await _context.Reservations
                             .Where(r => r.CanteenId == canteen.Id &&
-                                        r.ReservationDate == date &&
-                                        r.Time == currentTime &&
+                                        r.Date == date &&
                                         r.Status == ReservationStatus.Active)
-                            .CountAsync();
+                            .ToListAsync();
+
+                        var overlappingCount = reservations.Count(r =>
+                        {
+                            var resStart = TimeOnly.Parse(r.Time);
+                            var resEnd = resStart.AddMinutes(r.Duration);
+                            var slotEnd = currentTime.AddMinutes(duration);
+
+                            return resStart < slotEnd && resEnd > currentTime;
+                        });
 
                         slots.Add(new CanteenSlotDto
                         {
                             Date = date.ToString("yyyy-MM-dd"),
                             Meal = workingHour.Meal.ToString().ToLower(),
-                            StartTime = currentTime.ToString(@"hh\:mm"),
-
-                            RemainingCapacity = canteen.Capacity - reservations
+                            StartTime = currentTimeStr,
+                            RemainingCapacity = canteen.Capacity - overlappingCount
                         });
 
-                        currentTime = currentTime.Add(TimeSpan.FromMinutes(duration));
+                        currentTime = currentTime.AddMinutes(duration);
                     }
                 }
             }
@@ -223,7 +263,7 @@ namespace API.Controllers
             }
 
             var canteen = await _context.Canteens
-            .Include(c => c.WorkingHours) 
+            .Include(c => c.WorkingHours)
             .FirstOrDefaultAsync(c => c.Id == id);
             if (canteen == null)
             {

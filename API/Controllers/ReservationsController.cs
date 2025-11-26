@@ -47,8 +47,8 @@ namespace API.Controllers
                 Id = reservation.Id,
                 StudentId = reservation.StudentId,
                 CanteenId = reservation.CanteenId.ToString(),
-                Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
-                Time = reservation.Time.ToString(@"hh\:mm"),
+                Date = reservation.Date.ToString("yyyy-MM-dd"),
+                Time = reservation.Time,
                 Duration = reservation.Duration,
                 Status = reservation.Status.ToString()
             };
@@ -97,8 +97,8 @@ namespace API.Controllers
             {
                 StudentId = reservationDto.StudentId,
                 CanteenId = reservationDto.CanteenId,
-                ReservationDate = DateTime.Parse(reservationDto.Date),
-                Time = TimeSpan.Parse(reservationDto.Time),
+                Date = DateOnly.Parse(reservationDto.Date),
+                Time = reservationDto.Time,
                 Duration = reservationDto.Duration
             };
 
@@ -110,8 +110,8 @@ namespace API.Controllers
                 Id = reservation.Id,
                 StudentId = reservation.StudentId,
                 CanteenId = reservation.CanteenId.ToString(),
-                Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
-                Time = reservation.Time.ToString(@"hh\:mm"),
+                Date = reservation.Date.ToString("yyyy-MM-dd"),
+                Time = reservation.Time,
                 Duration = reservation.Duration,
                 Status = reservation.Status.ToString()
             };
@@ -135,13 +135,11 @@ namespace API.Controllers
                 return NotFound();
             }
 
-            // Ensure the reservation belongs to the student
             if (reservation.StudentId.ToString() != studentId)
             {
                 return Forbid("You can only cancel your own reservations.");
             }
 
-            // Update the reservation status to "Cancelled"
             reservation.Status = Enums.ReservationStatus.Cancelled;
             _context.Entry(reservation).State = EntityState.Modified;
 
@@ -154,14 +152,13 @@ namespace API.Controllers
                 return StatusCode(500, "An error occurred while canceling the reservation.");
             }
 
-            // Return the updated reservation as a response
             var response = new ReservationResponseDto
             {
                 Id = reservation.Id,
                 StudentId = reservation.StudentId,
                 CanteenId = reservation.CanteenId.ToString(),
-                Date = reservation.ReservationDate.ToString("yyyy-MM-dd"),
-                Time = reservation.Time.ToString(@"hh\:mm"),
+                Date = reservation.Date.ToString("yyyy-MM-dd"),
+                Time = reservation.Time,
                 Duration = reservation.Duration,
                 Status = reservation.Status.ToString()
             };
