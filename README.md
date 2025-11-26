@@ -31,7 +31,7 @@ A RESTful API for managing student canteen reservations built with ASP.NET Core.
 ### Development Tools
 - **Microsoft.VisualStudio.Web.CodeGeneration.Design 9.0.0** - Code generation tools
 
-## Prerequisites
+## PREREQUISITES
 
 Before running the application, ensure you have the following installed:
 
@@ -82,7 +82,8 @@ dotnet build
 ### Run in Development Mode
 
 ```bash
-# From the API directory
+
+# From the API directory, you are already three, if not its 5danaUOblacima/API
 cd API
 
 # Run the application
@@ -131,8 +132,14 @@ API/
 │   ├── ReservationsController.cs
 │   └── StudentsController.cs
 ├── Data/                 # Database context
+├── DTOs/                 # Data Transfer Objects
+├── Entities/             # Domain entities
+├── Enums/                # Enumeration types
+├── Exceptions/           # Custom exception types
 ├── Mappings/             # AutoMapper profiles
-├── Models/               # Entity models
+├── Middleware/           # Custom middleware
+├── Repositories/         # Repository layer
+├── Services/             # Service layer
 ├── Program.cs            # Application entry point
 ├── appsettings.json      # Configuration settings
 └── API.csproj           # Project file
