@@ -16,26 +16,16 @@ namespace API.Repositories
 
         public async Task<IEnumerable<Canteen>> GetAllAsync()
         {
-            return await _context.Canteens.ToListAsync();
+            return await _context.Canteens
+                .Include(c => c.WorkingHours)
+                .ToListAsync();
         }
 
         public async Task<Canteen?> GetByIdAsync(int id)
         {
-            return await _context.Canteens.FindAsync(id);
-        }
-
-        public async Task<Canteen?> GetByIdWithWorkingHoursAsync(int id)
-        {
             return await _context.Canteens
                 .Include(c => c.WorkingHours)
                 .FirstOrDefaultAsync(c => c.Id == id);
-        }
-
-        public async Task<IEnumerable<Canteen>> GetAllWithWorkingHoursAsync()
-        {
-            return await _context.Canteens
-                .Include(c => c.WorkingHours)
-                .ToListAsync();
         }
 
         public async Task<Canteen> AddAsync(Canteen canteen)
@@ -64,33 +54,11 @@ namespace API.Repositories
             return true;
         }
 
-        public async Task<List<Reservation>> GetActiveReservationsByCanteenIdAsync(int canteenId)
-        {
-            return await _context.Reservations
-                .Where(r => r.CanteenId == canteenId && r.Status == ReservationStatus.Active)
-                .ToListAsync();
-        }
-
         public async Task<List<Reservation>> GetAllReservationsByCanteenIdAsync(int canteenId)
         {
             return await _context.Reservations
                 .Where(r => r.CanteenId == canteenId)
                 .ToListAsync();
-        }
-
-        public async Task CancelReservationsAsync(List<Reservation> reservations)
-        {
-            foreach (var reservation in reservations)
-            {
-                reservation.Status = ReservationStatus.Cancelled;
-            }
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task DeleteReservationsAsync(List<Reservation> reservations)
-        {
-            _context.Reservations.RemoveRange(reservations);
-            await _context.SaveChangesAsync();
         }
 
         public async Task<List<Reservation>> GetReservationsByCanteenDateAndStatusAsync(int canteenId, DateOnly date)

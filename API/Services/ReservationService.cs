@@ -82,7 +82,7 @@ namespace API.Services
                 throw new BadRequestException("Student does not exist");
             }
 
-            var canteen = await _canteenRepository.GetByIdWithWorkingHoursAsync(canteenId);
+            var canteen = await _canteenRepository.GetByIdAsync(canteenId);
             if (canteen == null)
             {
                 throw new BadRequestException("Canteen does not exist");

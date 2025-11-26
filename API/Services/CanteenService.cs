@@ -24,13 +24,13 @@ namespace API.Services
 
         public async Task<IEnumerable<CanteenResponseDto>> GetAllCanteensAsync()
         {
-            var canteens = await _canteenRepository.GetAllWithWorkingHoursAsync();
+            var canteens = await _canteenRepository.GetAllAsync();
             return _mapper.Map<IEnumerable<CanteenResponseDto>>(canteens);
         }
 
         public async Task<CanteenResponseDto?> GetCanteenByIdAsync(int id)
         {
-            var canteen = await _canteenRepository.GetByIdWithWorkingHoursAsync(id);
+            var canteen = await _canteenRepository.GetByIdAsync(id);
             if (canteen == null)
             {
                 return null;
@@ -72,7 +72,7 @@ namespace API.Services
                 throw new ForbiddenException("Only an admin can update the canteen.");
             }
 
-            var canteen = await _canteenRepository.GetByIdWithWorkingHoursAsync(id);
+            var canteen = await _canteenRepository.GetByIdAsync(id);
 
             if (canteen == null)
             {
@@ -102,12 +102,6 @@ namespace API.Services
                 return false;
             }
 
-            var activeReservations = await _canteenRepository.GetActiveReservationsByCanteenIdAsync(id);
-            await _canteenRepository.CancelReservationsAsync(activeReservations);
-
-            var allReservations = await _canteenRepository.GetAllReservationsByCanteenIdAsync(id);
-            await _canteenRepository.DeleteReservationsAsync(allReservations);
-
             return await _canteenRepository.DeleteAsync(id);
         }
 
@@ -127,7 +121,7 @@ namespace API.Services
                 throw new BadRequestException("Invalid input parameters.");
             }
 
-            var canteens = await _canteenRepository.GetAllWithWorkingHoursAsync();
+            var canteens = await _canteenRepository.GetAllAsync();
             var response = new List<CanteenStatusResponseDto>();
 
             foreach (var canteen in canteens)
@@ -160,7 +154,7 @@ namespace API.Services
                 throw new BadRequestException("Invalid input parameters.");
             }
 
-            var canteen = await _canteenRepository.GetByIdWithWorkingHoursAsync(id);
+            var canteen = await _canteenRepository.GetByIdAsync(id);
 
             if (canteen == null)
             {
