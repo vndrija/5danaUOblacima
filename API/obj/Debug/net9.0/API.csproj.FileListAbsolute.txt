@@ -282,3 +282,5 @@ C:\Users\Lenovo\Desktop\5danaUOblacima\API\bin\Debug\net9.0\NSwag.Core.Yaml.dll
 C:\Users\Lenovo\Desktop\5danaUOblacima\API\bin\Debug\net9.0\NSwag.Generation.dll
 C:\Users\Lenovo\Desktop\5danaUOblacima\API\bin\Debug\net9.0\NSwag.Generation.AspNetCore.dll
 C:\Users\Lenovo\Desktop\5danaUOblacima\API\bin\Debug\net9.0\YamlDotNet.dll
+C:\Users\Lenovo\Desktop\5danaUOblacima\API\bin\Debug\net9.0\AutoMapper.dll
+C:\Users\Lenovo\Desktop\5danaUOblacima\API\bin\Debug\net9.0\AutoMapper.Extensions.Microsoft.DependencyInjection.dll

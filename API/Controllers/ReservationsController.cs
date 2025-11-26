@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using API.Data;
 using API.Entities;
 using API.DTOs;
+using AutoMapper;
+using API.Enums;
 
 namespace API.Controllers
 {
@@ -16,17 +18,21 @@ namespace API.Controllers
     public class ReservationsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public ReservationsController(AppDbContext context)
+        public ReservationsController(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         // GET: api/Reservations
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Reservation>>> GetReservations()
+        public async Task<ActionResult<IEnumerable<ReservationResponseDto>>> GetReservations()
         {
-            return await _context.Reservations.ToListAsync();
+            var reservations = await _context.Reservations.ToListAsync();
+            var reservationDtos = _mapper.Map<List<ReservationResponseDto>>(reservations);
+            return reservationDtos;
         }
 
         // GET: api/Reservations/5
@@ -35,37 +41,35 @@ namespace API.Controllers
         {
 
             var reservation = await _context.Reservations
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .FindAsync(id);
 
             if (reservation == null)
             {
                 return NotFound();
             }
 
-            var response = new ReservationResponseDto
-            {
-                Id = reservation.Id,
-                StudentId = reservation.StudentId,
-                CanteenId = reservation.CanteenId.ToString(),
-                Date = reservation.Date.ToString("yyyy-MM-dd"),
-                Time = reservation.Time,
-                Duration = reservation.Duration,
-                Status = reservation.Status.ToString()
-            };
+            var responseDto = _mapper.Map<ReservationResponseDto>(reservation);
 
 
-            return response;
+            return Ok(responseDto);
         }
 
         // PUT: api/Reservations/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutReservation(int id, Reservation reservation)
+        public async Task<IActionResult> PutReservation(int id, ReservationRequestDto reservationDto)
         {
-            if (id != reservation.Id)
+            if (id <= 0)
             {
                 return BadRequest();
             }
+
+            var reservation = await _context.Reservations.FindAsync(id);
+            if (reservation == null)
+            {
+                return NotFound();
+            }
+            _mapper.Map(reservationDto, reservation);
 
             _context.Entry(reservation).State = EntityState.Modified;
 
@@ -100,40 +104,24 @@ namespace API.Controllers
             }
 
 
-            var reservation = new Reservation
-            {
-                StudentId = reservationDto.StudentId,
-                CanteenId = reservationDto.CanteenId,
-                Date = DateOnly.Parse(reservationDto.Date),
-                Time = reservationDto.Time,
-                Duration = reservationDto.Duration
-            };
+            var reservation = _mapper.Map<Reservation>(reservationDto);
 
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
-            var response = new ReservationResponseDto
-            {
-                Id = reservation.Id,
-                StudentId = reservation.StudentId,
-                CanteenId = reservation.CanteenId.ToString(),
-                Date = reservation.Date.ToString("yyyy-MM-dd"),
-                Time = reservation.Time,
-                Duration = reservation.Duration,
-                Status = reservation.Status.ToString()
-            };
+            var response = _mapper.Map<ReservationResponseDto>(reservation);
 
             return CreatedAtAction(nameof(GetReservation), new { id = reservation.Id }, response);
         }
 
         // DELETE: api/Reservations/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteReservation(int id, [FromHeader] string studentId)
+        public async Task<IActionResult> DeleteReservation(int id, [FromHeader] int studentId)
         {
-            var student = await _context.Students.FindAsync(int.Parse(studentId));
+            var student = await _context.Students.FindAsync(studentId);
             if (student == null)
             {
-                return BadRequest("Invalid student ID.");
+                return BadRequest("Nevalidan studentId.");
             }
 
             var reservation = await _context.Reservations.FindAsync(id);
@@ -142,12 +130,12 @@ namespace API.Controllers
                 return NotFound();
             }
 
-            if (reservation.StudentId.ToString() != studentId)
+            if (reservation.StudentId != studentId)
             {
-                return Forbid("Samo student koji je napravio rezervaciju moze da je otkaze.");
+                return StatusCode(403, "Samo student koji je napravio rezervaciju moze da je otkaze.");
             }
 
-            reservation.Status = Enums.ReservationStatus.Cancelled;
+            reservation.Status = ReservationStatus.Cancelled;
             _context.Entry(reservation).State = EntityState.Modified;
 
             try
@@ -156,19 +144,11 @@ namespace API.Controllers
             }
             catch (Exception)
             {
-                return StatusCode(500, "An error occurred while canceling the reservation.");
+                return StatusCode(500, "Greška prilikom otkazivanja rezervacije.");
             }
 
-            var response = new ReservationResponseDto
-            {
-                Id = reservation.Id,
-                StudentId = reservation.StudentId,
-                CanteenId = reservation.CanteenId.ToString(),
-                Date = reservation.Date.ToString("yyyy-MM-dd"),
-                Time = reservation.Time,
-                Duration = reservation.Duration,
-                Status = reservation.Status.ToString()
-            };
+            var response = _mapper.Map<ReservationResponseDto>(reservation);
+            
 
             return Ok(response);
         }

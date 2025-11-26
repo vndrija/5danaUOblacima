@@ -1,10 +1,14 @@
 using API.Data;
+using API.Mappings;
 using Microsoft.EntityFrameworkCore;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+builder.Services.AddAutoMapper(typeof(StudentProfile), typeof(CanteenProfile), typeof(ReservationProfile), typeof(WorkingHourProfile));
+
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

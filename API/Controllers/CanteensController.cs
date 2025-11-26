@@ -9,6 +9,7 @@ using API.Data;
 using API.Entities;
 using API.DTOs;
 using API.Enums;
+using AutoMapper;
 
 namespace API.Controllers
 {
@@ -17,10 +18,12 @@ namespace API.Controllers
     public class CanteensController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public CanteensController(AppDbContext context)
+        public CanteensController(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         // GET: api/Canteens
@@ -31,19 +34,7 @@ namespace API.Controllers
                 .Include(c => c.WorkingHours)
                 .ToListAsync();
 
-            var canteenDtos = canteens.Select(c => new CanteenResponseDto
-            {
-                Id = c.Id.ToString(),
-                Name = c.Name,
-                Location = c.Location,
-                Capacity = c.Capacity,
-                WorkingHours = c.WorkingHours.Select(wh => new WorkingHourDto
-                {
-                    Meal = MealTypeToString(wh.Meal),
-                    From = wh.From,
-                    To = wh.To
-                }).ToList()
-            });
+            var canteenDtos = _mapper.Map<List<CanteenResponseDto>>(canteens);
             return Ok(canteenDtos);
         }
 
@@ -60,29 +51,96 @@ namespace API.Controllers
                 return NotFound();
             }
 
-            var canteenDto = new CanteenResponseDto
-            {
-                Id = canteen.Id.ToString(),
-                Name = canteen.Name,
-                Location = canteen.Location,
-                Capacity = canteen.Capacity,
-                WorkingHours = canteen.WorkingHours.Select(wh => new WorkingHourDto
-                {
-                    Meal = MealTypeToString(wh.Meal),
-                    From = wh.From,
-                    To = wh.To
-                }).ToList()
-            };
+            var canteenDto = _mapper.Map<CanteenResponseDto>(canteen);
 
             return Ok(canteenDto);
         }
 
+        // PUT: api/Canteens/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutCanteen(int id, UpdateCanteenRequestDto canteenDto, [FromHeader] int studentId)
+        {
+            if (canteenDto == null)
+                return BadRequest("Podaci za azuriranje nisu poslati.");
+
+            var student = await _context.Students.FindAsync(studentId);
+
+            if (student == null || !student.IsAdmin)
+                return StatusCode(403, "Samo redar moze azurirati menzu.");
+
+            var canteen = await _context.Canteens
+                .Include(c => c.WorkingHours)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (canteen == null)
+                return NotFound();
+
+            _mapper.Map(canteenDto, canteen);
+
+            await _context.SaveChangesAsync();
+
+            var response = _mapper.Map<CanteenResponseDto>(canteen);
+
+            return Ok(response);
+        }
+
+        // POST: api/Canteens
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<CanteenResponseDto>> PostCanteen(
+        CreateCanteenRequestDto canteenDto,
+        [FromHeader] int studentId)
+        {
+            var student = await _context.Students.FindAsync(studentId);
+
+            if (student == null || !student.IsAdmin)
+                return StatusCode(403, "Samo redar moze napraviti menzu.");
+
+            if (canteenDto.WorkingHours == null || !canteenDto.WorkingHours.Any())
+                return BadRequest("Menza mora imati radno vreme.");
+
+            var newCanteen = _mapper.Map<Canteen>(canteenDto);
+
+            _context.Canteens.Add(newCanteen);
+            await _context.SaveChangesAsync();
+
+            var response = _mapper.Map<CanteenResponseDto>(newCanteen);
+
+            return CreatedAtAction(nameof(GetCanteen), new { id = newCanteen.Id }, response);
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCanteen(int id, [FromHeader] int studentId)
+        {
+            var student = await _context.Students.FindAsync(studentId);
+
+            if (student == null || !student.IsAdmin)
+            {
+                return StatusCode(403, "Samo redar moze obrisati menzu.");
+            }
+
+
+
+            var canteen = await _context.Canteens.FindAsync(id);
+
+            if (canteen == null)
+            {
+                return NotFound();
+            }
+
+            _context.Canteens.Remove(canteen);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+
+        }
+
         [HttpGet("status")]
         public async Task<ActionResult<IEnumerable<CanteenStatusResponseDto>>> GetCanteensStatus(
-        [FromQuery] string startDate,     
-        [FromQuery] string endDate,       
-        [FromQuery] string startTime,     
-        [FromQuery] string endTime,       
+        [FromQuery] string startDate,
+        [FromQuery] string endDate,
+        [FromQuery] string startTime,
+        [FromQuery] string endTime,
         [FromQuery] int duration)
         {
             if (!DateOnly.TryParse(startDate, out var start) ||
@@ -90,12 +148,12 @@ namespace API.Controllers
                 !TimeOnly.TryParse(startTime, out var timeStart) ||
                 !TimeOnly.TryParse(endTime, out var timeEnd))
             {
-                return BadRequest("Invalid date or time format.");
+                return BadRequest("Nevalidan format datuma ili vremena.");
             }
 
             if (start > end || duration <= 0 || (duration != 30 && duration != 60))
             {
-                return BadRequest("Invalid input parameters.");
+                return BadRequest("Nevalidni ulazni parametri.");
             }
 
             var canteens = await _context.Canteens
@@ -168,24 +226,24 @@ namespace API.Controllers
 
         [HttpGet("{id}/status")]
         public async Task<ActionResult<CanteenStatusResponseDto>> GetCanteenStatus(
-            int id,
-            [FromQuery] string startDate,     
-            [FromQuery] string endDate,       
-            [FromQuery] string startTime,     
-            [FromQuery] string endTime,
-            [FromQuery] int duration)
+        int id,
+        [FromQuery] string startDate,
+        [FromQuery] string endDate,
+        [FromQuery] string startTime,
+        [FromQuery] string endTime,
+        [FromQuery] int duration)
         {
             if (!DateOnly.TryParse(startDate, out var start) ||
                 !DateOnly.TryParse(endDate, out var end) ||
                 !TimeOnly.TryParse(startTime, out var timeStart) ||
                 !TimeOnly.TryParse(endTime, out var timeEnd))
             {
-                return BadRequest("Invalid date or time format.");
+                return BadRequest("Nevalidan format datuma ili vremena.");
             }
 
             if (start > end || duration <= 0 || (duration != 30 && duration != 60))
             {
-                return BadRequest("Invalid input parameters.");
+                return BadRequest("Nevalidni ulazni parametri.");
             }
 
             var canteen = await _context.Canteens
@@ -250,152 +308,6 @@ namespace API.Controllers
             };
 
             return Ok(response);
-        }
-        // PUT: api/Canteens/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutCanteen(int id, UpdateCanteenRequestDto canteenDto, [FromHeader] int studentId)
-        {
-            var student = await _context.Students.FindAsync(studentId);
-            if (student == null || !student.IsAdmin)
-            {
-                return StatusCode(403, "Samo redar moze azurirati menzu.");
-            }
-
-            var canteen = await _context.Canteens
-            .Include(c => c.WorkingHours)
-            .FirstOrDefaultAsync(c => c.Id == id);
-            if (canteen == null)
-            {
-                return NotFound();
-            }
-
-            if (!string.IsNullOrEmpty(canteenDto.Name))
-                canteen.Name = canteenDto.Name;
-
-            if (!string.IsNullOrEmpty(canteenDto.Location))
-                canteen.Location = canteenDto.Location;
-
-            if (canteenDto.Capacity != null)
-                canteen.Capacity = canteenDto.Capacity.Value;
-
-            await _context.SaveChangesAsync();
-
-            var response = new CanteenResponseDto
-            {
-                Id = canteen.Id.ToString(),
-                Name = canteen.Name,
-                Location = canteen.Location,
-                Capacity = canteen.Capacity,
-                WorkingHours = canteen.WorkingHours.Select(wh => new WorkingHourDto
-                {
-                    Meal = MealTypeToString(wh.Meal),
-                    From = wh.From,
-                    To = wh.To
-                }).ToList()
-            };
-
-            return Ok(response);
-        }
-
-        // POST: api/Canteens
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<Canteen>> PostCanteen(CreateCanteenRequestDto canteen, [FromHeader] int studentId)
-        {
-            var student = await _context.Students.FindAsync(studentId);
-            if (student == null || !student.IsAdmin)
-            {
-                return StatusCode(403, "Samo redar moze napraviti menzu.");
-            }
-
-            var newCanteen = new Canteen
-            {
-                Name = canteen.Name,
-                Location = canteen.Location,
-                Capacity = canteen.Capacity
-            };
-
-            foreach (var workingHourDto in canteen.WorkingHours)
-            {
-                var workingHour = new WorkingHour
-                {
-                    Meal = ParseMealType(workingHourDto.Meal),
-                    From = workingHourDto.From,
-                    To = workingHourDto.To,
-                    Canteen = newCanteen
-                };
-                newCanteen.WorkingHours.Add(workingHour);
-            }
-
-            _context.Canteens.Add(newCanteen);
-            await _context.SaveChangesAsync();
-
-            var response = new CanteenResponseDto
-            {
-                Id = newCanteen.Id.ToString(),
-                Name = newCanteen.Name,
-                Location = newCanteen.Location,
-                Capacity = newCanteen.Capacity,
-                WorkingHours = newCanteen.WorkingHours.Select(wh => new WorkingHourDto
-                {
-                    Meal = MealTypeToString(wh.Meal),
-                    From = wh.From,
-                    To = wh.To
-                }).ToList()
-            };
-
-            return CreatedAtAction("GetCanteen", new { id = newCanteen.Id }, response);
-        }
-
-        private string MealTypeToString(MealType mealType)
-        {
-            return mealType switch
-            {
-                MealType.Breakfast => "breakfast",
-                MealType.Lunch => "lunch",
-                MealType.Dinner => "dinner",
-                _ => throw new ArgumentException($"Unknown meal type: {mealType}")
-            };
-        }
-
-        private MealType ParseMealType(string meal)
-        {
-            return meal.ToLower() switch
-            {
-                "breakfast" => MealType.Breakfast,
-                "lunch" => MealType.Lunch,
-                "dinner" => MealType.Dinner,
-                _ => throw new ArgumentException($"Invalid meal type: {meal}")
-            };
-        }
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCanteen(int id, [FromHeader] string studentId)
-        {
-            var student = await _context.Students.FindAsync(int.Parse(studentId));
-            if (student == null || !student.IsAdmin)
-            {
-                return Forbid("Samo redar moze obrisati menzu.");
-            }
-            {
-
-                var canteen = await _context.Canteens.FindAsync(id);
-
-                if (canteen == null)
-                {
-                    return NotFound();
-                }
-
-                _context.Canteens.Remove(canteen);
-                await _context.SaveChangesAsync();
-
-                return NoContent();
-            }
-        }
-
-        private bool CanteenExists(int id)
-        {
-            return _context.Canteens.Any(e => e.Id == id);
         }
     }
 }
