@@ -94,7 +94,7 @@ public class AppDbContext : DbContext
             .HasMany(c => c.Reservations)
             .WithOne(r => r.Canteen)
             .HasForeignKey(r => r.CanteenId)
-            .OnDelete(DeleteBehavior.Restrict); // Don't cascade delete
+            .OnDelete(DeleteBehavior.Cascade); // Cascade delete reservations when canteen is deleted
 
         modelBuilder.Entity<Student>()
             .HasMany(s => s.Reservations)

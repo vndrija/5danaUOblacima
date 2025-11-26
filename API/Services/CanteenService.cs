@@ -1,5 +1,6 @@
 using API.DTOs;
 using API.Entities;
+using API.Enums;
 using API.Exceptions;
 using API.Repositories;
 using AutoMapper;
@@ -100,6 +101,19 @@ namespace API.Services
             if (canteen == null)
             {
                 return false;
+            }
+
+            // Get all active reservations for this canteen and cancel them
+            var reservations = await _canteenRepository.GetAllReservationsByCanteenIdAsync(id);
+            var activeReservations = reservations.Where(r => r.Status == ReservationStatus.Active).ToList();
+
+            if (activeReservations.Count > 0)
+            {
+                foreach (var reservation in activeReservations)
+                {
+                    reservation.Status = ReservationStatus.Cancelled;
+                }
+                await _canteenRepository.SaveChangesAsync();
             }
 
             return await _canteenRepository.DeleteAsync(id);

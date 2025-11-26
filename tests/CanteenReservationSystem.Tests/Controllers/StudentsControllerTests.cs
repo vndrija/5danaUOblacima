@@ -2,6 +2,9 @@ using API.Controllers;
 using API.Data;
 using API.DTOs;
 using API.Entities;
+using API.Exceptions;
+using API.Repositories;
+using API.Services;
 using CanteenReservationSystem.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +15,15 @@ public class StudentsControllerTests : IDisposable
 {
     private readonly AppDbContext _context;
     private readonly StudentsController _controller;
+    private readonly IStudentService _studentService;
 
     public StudentsControllerTests()
     {
         _context = TestDbContextFactory.CreateInMemoryContext($"StudentsTestDb_{Guid.NewGuid()}");
         var mapper = MapperHelper.CreateMapper();
-        _controller = new StudentsController(_context, mapper);
+        var repository = new StudentRepository(_context);
+        _studentService = new StudentService(repository, mapper);
+        _controller = new StudentsController(_studentService);
     }
 
     public void Dispose()
@@ -67,13 +73,13 @@ public class StudentsControllerTests : IDisposable
             IsAdmin = false
         };
 
-        // Act
-        var result = await _controller.PostStudent(studentDto);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+        {
+            await _controller.PostStudent(studentDto);
+        });
 
-        // Assert
-        var actionResult = Assert.IsType<ActionResult<StudentResponseDto>>(result);
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
-        Assert.NotNull(badRequestResult.Value);
+        Assert.Equal("A student with this email already exists", exception.Message);
     }
 
     [Fact]
