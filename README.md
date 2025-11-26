@@ -90,6 +90,16 @@ cd API
 dotnet run
 ```
 
+## Levi9 Postman tests
+```bash
+# I changed baseURL variable in Environments to 'https://localhost:7040/api'.
+```
+![localHost](https://github.com/user-attachments/assets/370b9038-c1de-4f0d-a575-ff29dd4fd635)
+
+![PostmanTests](https://github.com/user-attachments/assets/6377e2e0-c042-4168-9b2d-dc629535e93a)
+
+
+
 ## Running Unit Tests
 
 ### Run All Tests
@@ -159,4 +169,5 @@ The API provides the following resources:
 - **Canteens** - Canteen management endpoints
 - **Reservations** - Reservation management endpoints
 
-For detailed endpoint documentation, refer to the Swagger UI when running the application.
+For detailed endpoint documentation, refer to the Swagger UI when running the application, https://localhost:7040/api/swagger.
+![swagerSlika](https://github.com/user-attachments/assets/4f8f4cdb-3ded-450c-9b60-2f7884bd1c4b)
