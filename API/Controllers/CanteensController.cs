@@ -105,7 +105,7 @@ namespace API.Controllers
                     var slotStart = (whStart > startTime) ? whStart : startTime;
                     var slotEnd = (whEnd < endTime) ? whEnd : endTime;
 
-                    if (slotStart >= slotEnd) continue; 
+                    if (slotStart >= slotEnd) continue;
 
                     for (var date = startDate; date <= endDate; date = date.AddDays(1))
                     {
@@ -214,15 +214,17 @@ namespace API.Controllers
         // PUT: api/Canteens/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCanteen(int id, UpdateCanteenRequestDto canteenDto, [FromHeader] string studentId)
+        public async Task<IActionResult> PutCanteen(int id, UpdateCanteenRequestDto canteenDto, [FromHeader] int studentId)
         {
-            var student = await _context.Students.FindAsync(int.Parse(studentId));
+            var student = await _context.Students.FindAsync(studentId);
             if (student == null || !student.IsAdmin)
             {
-                return Forbid("Only admin students can update a canteen.");
+                return StatusCode(403, "Samo redar moze napraviti menzu.");
             }
 
-            var canteen = await _context.Canteens.FindAsync(id);
+            var canteen = await _context.Canteens
+            .Include(c => c.WorkingHours) 
+            .FirstOrDefaultAsync(c => c.Id == id);
             if (canteen == null)
             {
                 return NotFound();
@@ -237,7 +239,7 @@ namespace API.Controllers
             if (canteenDto.Capacity != null)
                 canteen.Capacity = canteenDto.Capacity.Value;
 
-            await _context.SaveChangesAsync(); 
+            await _context.SaveChangesAsync();
 
             var response = new CanteenResponseDto
             {
@@ -259,8 +261,14 @@ namespace API.Controllers
         // POST: api/Canteens
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Canteen>> PostCanteen(CreateCanteenRequestDto canteen)
+        public async Task<ActionResult<Canteen>> PostCanteen(CreateCanteenRequestDto canteen, [FromHeader] int studentId)
         {
+            var student = await _context.Students.FindAsync(studentId);
+            if (student == null || !student.IsAdmin)
+            {
+                return StatusCode(403, "Samo redar moze napraviti menzu.");
+            }
+
             var newCanteen = new Canteen
             {
                 Name = canteen.Name,
