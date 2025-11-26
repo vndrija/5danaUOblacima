@@ -125,14 +125,24 @@ namespace API.Controllers
             {
                 return NotFound();
             }
+            // Cancel active reservations first
             var activeReservations = await _context.Reservations
                 .Where(r => r.CanteenId == id && r.Status == ReservationStatus.Active)
                 .ToListAsync();
-            
+
             foreach (var reservation in activeReservations)
             {
                 reservation.Status = ReservationStatus.Cancelled;
             }
+
+            await _context.SaveChangesAsync();
+
+            // Delete all reservations for this canteen (including cancelled ones)
+            var allReservations = await _context.Reservations
+                .Where(r => r.CanteenId == id)
+                .ToListAsync();
+
+            _context.Reservations.RemoveRange(allReservations);
 
             _context.Canteens.Remove(canteen);
             await _context.SaveChangesAsync();
