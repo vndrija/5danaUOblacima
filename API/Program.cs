@@ -1,5 +1,7 @@
 using API.Data;
 using API.Mappings;
+using API.Repositories;
+using API.Services;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -9,6 +11,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAutoMapper(typeof(StudentProfile), typeof(CanteenProfile), typeof(ReservationProfile), typeof(WorkingHourProfile));
 
+// Register repositories
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped<ICanteenRepository, CanteenRepository>();
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+
+// Register services
+builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<ICanteenService, CanteenService>();
+builder.Services.AddScoped<IReservationService, ReservationService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

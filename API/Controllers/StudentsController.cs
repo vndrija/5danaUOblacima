@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using API.Data;
-using API.Entities;
 using API.DTOs;
-using AutoMapper;
+using API.Services;
 
 namespace API.Controllers
 {
@@ -11,106 +8,65 @@ namespace API.Controllers
     [ApiController]
     public class StudentsController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IMapper _mapper;
+        private readonly IStudentService _studentService;
 
-        public StudentsController(AppDbContext context, IMapper mapper)
+        public StudentsController(IStudentService studentService)
         {
-            _context = context;
-            _mapper = mapper;
+            _studentService = studentService;
         }
 
         // GET: api/Students
         [HttpGet]
         public async Task<ActionResult<IEnumerable<StudentResponseDto>>> GetStudents()
         {
-            var students = await _context.Students.ToListAsync();
-            var studentDtos = _mapper.Map<List<StudentResponseDto>>(students);
-            return studentDtos;
+            var students = await _studentService.GetAllStudentsAsync();
+            return Ok(students);
         }
 
         // GET: api/Students/5
         [HttpGet("{id}")]
         public async Task<ActionResult<StudentResponseDto>> GetStudent(int id)
         {
-            var student = await _context.Students.FindAsync(id);
+            var student = await _studentService.GetStudentByIdAsync(id);
 
             if (student == null)
             {
                 return NotFound();
             }
-            var studentDto = _mapper.Map<StudentResponseDto>(student);
 
-            return Ok(studentDto);
+            return Ok(student);
         }
 
         // PUT: api/Students/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutStudent(int id, StudentRequestDto studentDto)
         {
-            if (id <= 0)
-            {
-                return BadRequest();
-            }
+            var result = await _studentService.UpdateStudentAsync(id, studentDto);
 
-            var student = await _context.Students.FindAsync(id);
-
-            if (student == null)
+            if (!result)
             {
                 return NotFound();
-            }
-
-            _mapper.Map(studentDto, student);
-
-            _context.Entry(student).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!StudentExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
             }
 
             return NoContent();
         }
 
         // POST: api/Students
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<StudentResponseDto>> PostStudent(StudentRequestDto studentDto)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(studentDto.Email) || !studentDto.Email.Contains("@"))
-                {
-                    return BadRequest(new { error = "Invalid email format" });
-                }
-                var existingStudent = await _context.Students
-                    .FirstOrDefaultAsync(s => s.Email == studentDto.Email);
-
-                if (existingStudent != null)
-                {
-                    return BadRequest(new { error = "A student with this email already exists" });
-                }
-
-                var student = _mapper.Map<Student>(studentDto);
-
-                _context.Students.Add(student);
-                await _context.SaveChangesAsync();
-
-                var studentResponseDto = _mapper.Map<StudentResponseDto>(student);
-
-                return CreatedAtAction(nameof(GetStudent), new { id = student.Id }, studentResponseDto);
+                var studentResponseDto = await _studentService.CreateStudentAsync(studentDto);
+                return CreatedAtAction(nameof(GetStudent), new { id = studentResponseDto.Id }, studentResponseDto);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception)
             {
@@ -121,20 +77,14 @@ namespace API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStudent(int id)
         {
-            var student = await _context.Students.FindAsync(id);
-            if (student == null)
+            var result = await _studentService.DeleteStudentAsync(id);
+
+            if (!result)
             {
                 return NotFound();
             }
 
-            _context.Students.Remove(student);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-        private bool StudentExists(int id)
-        {
-            return _context.Students.Any(e => e.Id == id);
         }
     }
 }
